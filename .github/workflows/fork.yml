@@ -1,0 +1,51 @@
+name: crm-frontend-fork-notify
+on:
+  fork:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Fork Notification
+        run: |
+          REPO="${{ github.repository }}"
+          FORKER="${{ github.event.sender.login }}"
+          FORKER_PROFILE="${{ github.event.sender.html_url }}"
+          FORKER_AVATAR="${{ github.event.sender.avatar_url }}"
+          NEW_REPO_URL="${{ github.event.forkee.html_url }}"
+          NEW_REPO_FULL_NAME="${{ github.event.forkee.full_name }}"
+          TIME="$(TZ='Asia/Kolkata' date +"%Y-%m-%d %I:%M %p IST")"
+
+          curl -X POST "${{ secrets.ALERT_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"type\": \"message\",
+            \"attachments\": [{
+              \"contentType\": \"application/vnd.microsoft.card.adaptive\",
+              \"content\": {
+                \"\$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",
+                \"type\": \"AdaptiveCard\",
+                \"version\": \"1.4\",
+                \"body\": [
+                  {\"type\": \"TextBlock\", \"text\": \"🍴 Repository Forked\", \"weight\": \"Bolder\", \"size\": \"Large\", \"wrap\": true},
+                  {\"type\": \"ColumnSet\", \"columns\": [
+                    {\"type\": \"Column\", \"width\": \"auto\", \"items\": [
+                      {\"type\": \"Image\", \"url\": \"${FORKER_AVATAR}\", \"size\": \"Small\", \"style\": \"Person\"}
+                    ]},
+                    {\"type\": \"Column\", \"width\": \"stretch\", \"items\": [
+                      {\"type\": \"TextBlock\", \"text\": \"**${FORKER}** forked **${REPO}**\", \"wrap\": true}
+                    ]}
+                  ]},
+                  {\"type\": \"FactSet\", \"facts\": [
+                    {\"title\": \"Forked By\", \"value\": \"${FORKER}\"},
+                    {\"title\": \"New Repo\", \"value\": \"${NEW_REPO_FULL_NAME}\"},
+                    {\"title\": \"Time\", \"value\": \"${TIME}\"}
+                  ]}
+                ],
+                \"actions\": [
+                  {\"type\": \"Action.OpenUrl\", \"title\": \"👤 View Profile\", \"url\": \"${FORKER_PROFILE}\"},
+                  {\"type\": \"Action.OpenUrl\", \"title\": \"🔍 View Fork\", \"url\": \"${NEW_REPO_URL}\"}
+                ]
+              }
+            }]
+          }"
